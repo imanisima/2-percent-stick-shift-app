@@ -1,0 +1,102 @@
+---
+import type { Listing } from '../lib/types';
+const { listing } = Astro.props as { listing: Listing };
+const preview = listing.media[0];
+const formattedPrice = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(listing.price);
+const distanceLabel = listing.distanceMiles !== undefined ? `${listing.distanceMiles.toFixed(1)} mi` : null;
+---
+<article
+  class="card"
+  data-listing-id={listing.id}
+  data-search-text={`${listing.title} ${listing.make} ${listing.model} ${listing.description}`.toLowerCase()}
+>
+  <div class="card-media-shell">
+    {preview ? (
+      preview.type === 'video' ? (
+        <video class="card-media" src={preview.url} muted loop playsinline controls={false} preload="metadata" />
+      ) : (
+        <img
+          class="card-media"
+          src={preview.thumbnailUrl || preview.url || '/images/car-placeholder.svg'}
+          alt={listing.title}
+          onerror="this.onerror=null; this.src='/images/car-placeholder.svg';"
+        />
+      )
+    ) : null}
+    <a class="card-link card-media-link" href={`/listings/${listing.id}`} aria-label={`View ${listing.title}`}></a>
+  </div>
+  <a class="card-link" href={`/listings/${listing.id}`}>
+    <div class="card-header">
+      <h2 class="card-title">{listing.title}</h2>
+      <p class="card-meta">{formattedPrice} · {listing.year} · {listing.mileage.toLocaleString()} mi</p>
+    </div>
+    <div class="card-body">
+      <p>{listing.description}</p>
+      <div class="card-tags">
+        <span class="tag">{listing.make}</span>
+        <span class="tag">{listing.model}</span>
+        <span class="tag">{listing.gears}-speed</span>
+        <span class="tag">{listing.drivetrain}</span>
+        {distanceLabel ? <span class="tag">{distanceLabel}</span> : null}
+      </div>
+    </div>
+  </a>
+    <div class="card-footer">
+      <button
+        class="save-toggle"
+        type="button"
+        aria-label="Save listing"
+        data-listing-id={listing.id}
+      >
+        <span class="save-icon" aria-hidden="true">☆</span>
+      </button>
+    </div>
+  </article>
+
+<script>
+  import { isSavedListing, toggleSavedListing } from '../lib/saved-listings';
+
+  const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.save-toggle'));
+
+  buttons.forEach((button) => {
+    const icon = button.querySelector<HTMLElement>('.save-icon');
+    const listingId = button.dataset.listingId;
+
+    if (!listingId || !button || !icon) {
+      return;
+    }
+
+    const syncState = () => {
+      const saved = isSavedListing(listingId);
+      button.classList.toggle('is-active', saved);
+      button.setAttribute('aria-pressed', String(saved));
+      icon.textContent = saved ? '★' : '☆';
+    };
+
+    syncState();
+
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const saved = toggleSavedListing(listingId);
+      button.classList.toggle('is-active', saved);
+      button.setAttribute('aria-pressed', String(saved));
+      icon.textContent = saved ? '★' : '☆';
+      window.dispatchEvent(new Event('saved-listings-changed'));
+    });
+
+    const card = button.closest('.card');
+    if (card) {
+      card.addEventListener('click', (event) => {
+        if (event.target instanceof HTMLElement && event.target.closest('.save-toggle')) {
+          return;
+        }
+
+        const link = card.querySelector<HTMLAnchorElement>('.card-link');
+        if (link) {
+          window.location.assign(link.href);
+        }
+      });
+    }
+  });
+</script>

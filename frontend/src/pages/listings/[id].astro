@@ -1,0 +1,146 @@
+---
+import Layout from '../../components/Layout.astro';
+import type { Listing, Media } from '../../lib/types';
+import { getListings } from '../../lib/storage';
+
+export const prerender = false;
+export const dynamic = 'force-dynamic';
+
+const listingId = Astro.params.id;
+const listings = await getListings();
+const listing = listings.find((entry: Listing) => entry.id === listingId);
+
+const fallbackMedia: Media = {
+  id: 'fallback-media',
+  url: '/images/car-placeholder.svg',
+  thumbnailUrl: '/images/car-placeholder.svg',
+  type: 'image',
+};
+
+const gallery = listing?.media?.length ? listing.media : [fallbackMedia];
+const heroMedia = gallery[0] ?? fallbackMedia;
+const formattedPrice = listing
+  ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(listing.price)
+  : '$0';
+---
+<Layout title={listing?.title ?? 'Listing details'}>
+  <section class="detail-shell">
+    {listing ? (
+      <>
+        <div class="detail-gallery">
+          <div class="detail-hero-shell">
+            <img
+              class="detail-main-image"
+              src={heroMedia.url}
+              alt={listing.title}
+              onerror="this.onerror=null; this.src='/images/car-placeholder.svg';"
+            />
+            <button class="detail-save-toggle" type="button" aria-label="Save listing" data-listing-id={listing.id}>
+              <span class="save-icon" aria-hidden="true">☆</span>
+            </button>
+          </div>
+          <div class="detail-thumbs" role="list" aria-label="Additional photos">
+            {gallery.map((item) => (
+              <img
+                role="listitem"
+                class="detail-thumb"
+                src={item.thumbnailUrl || item.url}
+                alt={`${listing.title} photo`}
+                onerror="this.onerror=null; this.src='/images/car-placeholder.svg';"
+              />
+            ))}
+          </div>
+        </div>
+
+        <div class="detail-summary">
+          <p class="eyebrow">Manual transmission · {listing.make} {listing.model}</p>
+          <h1 class="detail-title">{listing.title}</h1>
+          <div class="detail-price">{formattedPrice}</div>
+          <p class="detail-description">{listing.description}</p>
+
+          <div class="detail-actions">
+            <a class="button-link" href="/">Back to listings</a>
+            <span class="detail-pill">{listing.condition}</span>
+          </div>
+
+          <div class="detail-specs">
+            <div class="spec-card">
+              <span class="spec-label">Year</span>
+              <strong>{listing.year}</strong>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">Mileage</span>
+              <strong>{listing.mileage.toLocaleString()} mi</strong>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">Color</span>
+              <strong>{listing.color}</strong>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">Engine</span>
+              <strong>{listing.engine}</strong>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">Transmission</span>
+              <strong>{listing.gears}-speed</strong>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">Drivetrain</span>
+              <strong>{listing.drivetrain}</strong>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">Fuel</span>
+              <strong>{listing.fuel}</strong>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">ZIP</span>
+              <strong>{listing.zip}</strong>
+            </div>
+          </div>
+
+          <section class="detail-section">
+            <h2>Why this car stands out</h2>
+            <p>
+              This listing is designed to feel like a premium product page, with dedicated space for high-quality photography,
+              key specs, and a clear call to action for buyers to learn more.
+            </p>
+          </section>
+        </div>
+      </>
+    ) : (
+      <div class="empty-state">
+        <h1 class="detail-title">Listing not found</h1>
+        <p class="detail-description">That listing is no longer available. Head back to the marketplace and browse the current inventory.</p>
+        <a class="button-link" href="/">View listings</a>
+      </div>
+    )}
+  </section>
+</Layout>
+
+<script>
+  import { isSavedListing, toggleSavedListing } from '../../lib/saved-listings';
+
+  const button = document.querySelector<HTMLButtonElement>('.detail-save-toggle');
+  const icon = button?.querySelector<HTMLElement>('.save-icon');
+  const listingId = button?.dataset.listingId;
+
+  if (button && icon && listingId) {
+    const syncState = () => {
+      const saved = isSavedListing(listingId);
+      button.classList.toggle('is-active', saved);
+      button.setAttribute('aria-pressed', String(saved));
+      icon.textContent = saved ? '★' : '☆';
+    };
+
+    syncState();
+
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      const saved = toggleSavedListing(listingId);
+      button.classList.toggle('is-active', saved);
+      button.setAttribute('aria-pressed', String(saved));
+      icon.textContent = saved ? '★' : '☆';
+      window.dispatchEvent(new Event('saved-listings-changed'));
+    });
+  }
+</script>
