@@ -1,0 +1,109 @@
+---
+import Layout from '../components/Layout.astro';
+import ListingCard from '../components/ListingCard.astro';
+import type { Listing } from '../lib/types';
+import { getListings } from '../lib/storage';
+
+export const prerender = false;
+export const dynamic = 'force-dynamic';
+
+const url = new URL(Astro.request.url);
+const searchZip = url.searchParams.get('zip')?.trim() ?? '';
+const radius = Number(url.searchParams.get('radius') ?? '50');
+
+const apiUrl = new URL('/api/listings', Astro.request.url);
+if (searchZip) apiUrl.searchParams.set('zip', searchZip);
+apiUrl.searchParams.set('radius', String(radius));
+
+const response = await fetch(apiUrl.toString());
+let filteredListings: Listing[] = [];
+let searchError = '';
+let searchLabel = 'Recent listings';
+
+if (!response.ok) {
+  searchError = 'Could not load listings from the mock backend. Showing sample/local fallback data.';
+  filteredListings = await getListings();
+} else {
+  filteredListings = (await response.json()) as Listing[];
+  if (searchZip) {
+    searchLabel = `Listings within ${radius} miles of ${searchZip}`;
+  }
+}
+
+const totalCount = filteredListings.length;
+---
+<Layout title="Listings">
+  <section>
+    <h1 class="page-headline">StickShift Listings</h1>
+    <p class="page-copy">Search manual-transmission cars by ZIP code and radius. Add your own listings and save searches for later.</p>
+
+    <div class="top-cards">
+      <section class="form-panel">
+        <form method="get" action="/">
+          <div class="field">
+            <label for="search">Search listings</label>
+            <input id="search" name="search" type="text" placeholder="Toyota, Supra, manual, red..." />
+          </div>
+          <div class="field">
+            <label for="zip">ZIP Code</label>
+            <input id="zip" name="zip" type="text" value={searchZip} placeholder="94103" maxlength="5" />
+          </div>
+          <div class="field">
+            <label for="radius">Radius (miles)</label>
+            <select id="radius" name="radius" value={radius.toString()}>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+        </form>
+      </section>
+
+      <section class="summary-panel">
+        <h2 class="card-title">{searchLabel}</h2>
+        <p id="listing-count" class="card-meta">{totalCount} listing{totalCount === 1 ? '' : 's'} found.</p>
+        <p class="page-copy">Type a make, model, color, or keyword to filter the cards instantly. Leave the box empty to show all listings.</p>
+      </section>
+    </div>
+
+    {searchError ? <div class="alert alert-error">{searchError}</div> : null}
+    {totalCount === 0 && !searchError ? (
+      <div class="alert alert-success">No listings match this search yet. Add a listing and try again.</div>
+    ) : null}
+
+    <div id="listing-grid" class="grid card-grid">
+      {filteredListings.map((listing) => (
+        <ListingCard listing={listing} />
+      ))}
+    </div>
+  </section>
+</Layout>
+
+<script>
+  const searchInput = document.getElementById('search');
+  const listingGrid = document.getElementById('listing-grid');
+  const listingCount = document.getElementById('listing-count');
+
+  if (searchInput && listingGrid && listingCount) {
+    const cards = Array.from(listingGrid.querySelectorAll<HTMLElement>('[data-search-text]'));
+
+    const applyFilter = () => {
+      const query = searchInput.value.trim().toLowerCase();
+      const terms = query.split(/\s+/).filter(Boolean);
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const searchText = card.dataset.searchText ?? '';
+        const matches = terms.length === 0 || terms.every((term) => searchText.includes(term));
+        card.style.display = matches ? '' : 'none';
+        if (matches) visibleCount += 1;
+      });
+
+      listingCount.textContent = `${visibleCount} listing${visibleCount === 1 ? '' : 's'} found.`;
+    };
+
+    searchInput.addEventListener('input', applyFilter);
+    applyFilter();
+  }
+</script>

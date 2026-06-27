@@ -1,0 +1,20 @@
+{
+  "name": "stickshift-marketplace-astro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --hostname 0.0.0.0 --port 3000",
+    "build": "astro build",
+    "preview": "astro preview --hostname 0.0.0.0 --port 3000"
+  },
+  "dependencies": {
+    "astro": "^4.10.0",
+    "graphql": "^16.8.0",
+    "zipcodes": "^8.0.0"
+  },
+  "devDependencies": {
+    "@astrojs/node": "^8.1.0",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.6.2"
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "listings": [
+    {
+      "id": "sample-1",
+      "title": "1998 Toyota Supra RZ",
+      "make": "Toyota",
+      "model": "Supra",
+      "year": 1998,
+      "price": 46500,
+      "mileage": 132000,
+      "color": "Aztec Red",
+      "engine": "2JZ-GTE",
+      "gears": 6,
+      "drivetrain": "RWD",
+      "fuel": "Gasoline",
+      "condition": "Excellent",
+      "description": "A timeless manual Supra with clean build notes and classic tuner appeal.",
+      "zip": "94103",
+      "lat": 37.7751,
+      "lon": -122.4188,
+      "createdAt": "2026-06-27T00:00:00.000Z",
+      "media": [
+        {
+          "id": "sample-1-img",
+          "url": "/images/supra.jpg",
+          "thumbnailUrl": "/images/supra.jpg",
+          "type": "image"
+        },
+        {
+          "id": "sample-1-img-2",
+          "url": "/images/supra.jpg",
+          "thumbnailUrl": "/images/supra.jpg",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "sample-2",
+      "title": "2003 Subaru WRX STI",
+      "make": "Subaru",
+      "model": "WRX STI",
+      "year": 2003,
+      "price": 28900,
+      "mileage": 98000,
+      "color": "World Rally Blue",
+      "engine": "EJ25",
+      "gears": 6,
+      "drivetrain": "AWD",
+      "fuel": "Gasoline",
+      "condition": "Very Good",
+      "description": "Well-kept rally legend with a responsive manual gearbox and preserved OEM character.",
+      "zip": "94016",
+      "lat": 37.7588,
+      "lon": -122.5076,
+      "createdAt": "2026-06-20T00:00:00.000Z",
+      "media": [
+        {
+          "id": "sample-2-img",
+          "url": "/images/wrx.jpg",
+          "thumbnailUrl": "/images/wrx.jpg",
+          "type": "image"
+        },
+        {
+          "id": "sample-2-img-2",
+          "url": "/images/wrx.jpg",
+          "thumbnailUrl": "/images/wrx.jpg",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "sample-3",
+      "title": "2023 Nissan 400Z",
+      "make": "Nissan",
+      "model": "400Z",
+      "year": 2023,
+      "price": 38900,
+      "mileage": 7400,
+      "color": "Bourbon Orange",
+      "engine": "VR30DDTT",
+      "gears": 6,
+      "drivetrain": "RWD",
+      "fuel": "Gasoline",
+      "condition": "Excellent",
+      "description": "Low-mileage modern sports car with a crisp manual gearbox and bold styling.",
+      "zip": "94107",
+      "lat": 37.7614,
+      "lon": -122.4595,
+      "createdAt": "2026-06-25T00:00:00.000Z",
+      "media": [
+        {
+          "id": "sample-3-img",
+          "url": "/images/car-placeholder.svg",
+          "thumbnailUrl": "/images/car-placeholder.svg",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "sample-4",
+      "title": "2019 Volkswagen GLI",
+      "make": "Volkswagen",
+      "model": "GLI",
+      "year": 2019,
+      "price": 17900,
+      "mileage": 53100,
+      "color": "Deep Black",
+      "engine": "2.0T TSI",
+      "gears": 6,
+      "drivetrain": "FWD",
+      "fuel": "Gasoline",
+      "condition": "Very Good",
+      "description": "Practical and punchy, with a lively manual setup and everyday comfort.",
+      "zip": "95014",
+      "lat": 37.3658,
+      "lon": -122.0322,
+      "createdAt": "2026-06-24T00:00:00.000Z",
+      "media": [
+        {
+          "id": "sample-4-img",
+          "url": "/images/car-placeholder.svg",
+          "thumbnailUrl": "/images/car-placeholder.svg",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "sample-5",
+      "title": "1999 Mazda MX-5 Miata",
+      "make": "Mazda",
+      "model": "MX-5 Miata",
+      "year": 1999,
+      "price": 12900,
+      "mileage": 86000,
+      "color": "Classic Red",
+      "engine": "BP-4W",
+      "gears": 5,
+      "drivetrain": "RWD",
+      "fuel": "Gasoline",
+      "condition": "Good",
+      "description": "A lightweight roadster with top-down smiles and a sweet-shifting six-speed gearbox.",
+      "zip": "94612",
+      "lat": 37.8044,
+      "lon": -122.2708,
+      "createdAt": "2026-06-23T00:00:00.000Z",
+      "media": [
+        {
+          "id": "sample-5-img",
+          "url": "/images/car-placeholder.svg",
+          "thumbnailUrl": "/images/car-placeholder.svg",
+          "type": "image"
+        }
+      ]
+    }
+  ],
+  "savedSearches": []
+}

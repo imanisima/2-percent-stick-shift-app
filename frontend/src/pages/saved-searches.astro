@@ -1,0 +1,304 @@
+---
+import Layout from '../components/Layout.astro';
+import { fetchSavedSearches, createSavedSearch, deleteSavedSearch } from '../lib/backend';
+import { getSavedSearches, getListings } from '../lib/storage';
+import type { Listing, SavedSearch } from '../lib/types';
+
+export const prerender = false;
+export const dynamic = 'force-dynamic';
+
+let success = '';
+let error = '';
+let searches: SavedSearch[] = [];
+let initialSavedListings: Listing[] = [];
+
+try {
+  searches = await fetchSavedSearches();
+} catch {
+  searches = await getSavedSearches();
+}
+
+const defaultSavedListingIds = ['sample-1'];
+initialSavedListings = (await getListings()).filter((listing) => defaultSavedListingIds.includes(listing.id));
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const action = String(form.get('action') ?? '');
+
+  if (action === 'save') {
+    const name = String(form.get('name') ?? '').trim();
+
+    if (!name) {
+      error = 'Please enter a name for the saved search.';
+    } else {
+      try {
+        await createSavedSearch({ name, zip: '', radius: 0 });
+        success = 'Saved search added.';
+      } catch {
+        error = 'Unable to save search through the mock backend.';
+      }
+    }
+  }
+
+  if (action === 'delete') {
+    const deleteId = String(form.get('deleteId') ?? '');
+    if (deleteId) {
+      try {
+        await deleteSavedSearch(deleteId);
+        success = 'Saved search removed.';
+      } catch {
+        error = 'Unable to remove saved search through the mock backend.';
+      }
+    }
+  }
+
+  try {
+    searches = await fetchSavedSearches();
+  } catch {
+    searches = await getSavedSearches();
+  }
+}
+---
+<Layout title="Saved Searches">
+  <section>
+    <h1 class="page-headline">Saved Searches</h1>
+    <p class="page-copy">Keep your most-used ZIP + radius searches in one place and return to the best manual transmission opportunities.</p>
+
+    {error ? <div class="alert alert-error">{error}</div> : null}
+    {success ? <div class="alert alert-success">{success}</div> : null}
+
+    <section class="form-panel" style="margin-top: 1.5rem;">
+      <div class="field">
+        <label for="saved-search-filter">Search</label>
+        <input id="saved-search-filter" type="text" placeholder="Filter saved searches and starred cars" />
+      </div>
+      <p id="saved-search-count" class="card-meta">Showing all saved searches and starred vehicles.</p>
+    </section>
+
+    <section class="form-panel" style="margin-top: 1.5rem;">
+      <h2 class="card-title">Saved Vehicles</h2>
+      <p class="page-copy">Cars you've starred from the listings pages appear here for quick access.</p>
+      <div id="saved-listings-panel" class="grid card-grid">
+        {initialSavedListings.map((listing) => {
+          const preview = listing.media?.[0];
+          const previewUrl = preview?.thumbnailUrl || preview?.url || '/images/car-placeholder.svg';
+          return (
+            <article class="card saved-vehicle-card" data-search-text={`${listing.title} ${listing.make} ${listing.model} ${listing.description} ${listing.color} ${listing.year} ${listing.price}`.toLowerCase()}>
+              <a class="card-link" href={`/listings/${listing.id}`}>
+                <img class="card-media" src={previewUrl} alt={listing.title} />
+                <div class="card-header">
+                  <h2 class="card-title">{listing.title}</h2>
+                  <p class="card-meta">${listing.price.toLocaleString()} · {listing.year} · {listing.mileage.toLocaleString()} mi</p>
+                </div>
+              </a>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+
+    <div id="saved-search-grid" class="grid card-grid" style="margin-top: 1.5rem;">
+      {searches.length === 0 && initialSavedListings.length === 0 ? (
+        <div class="alert alert-success">No saved searches yet. Create one to jump back to your favorite ZIP + radius filters.</div>
+      ) : (
+        searches.map((search) => (
+          <article
+            class="card saved-search-card"
+            data-search-text={`${search.name} ${search.zip} ${search.radius}`.toLowerCase()}
+            data-search-id={search.id}
+          >
+            <div class="card-header">
+              <h2 class="card-title">{search.name}</h2>
+              <p class="card-meta">{search.zip} · {search.radius} miles</p>
+            </div>
+            <div class="card-body saved-search-card-body">
+              <p class="page-copy">Saved on {new Date(search.createdAt).toLocaleDateString()}</p>
+              <div class="touch-hint">Right-click or press and hold to remove</div>
+              <form method="post" class="context-menu" aria-hidden="true">
+                <input type="hidden" name="action" value="delete" />
+                <input type="hidden" name="deleteId" value={search.id} />
+                <button type="submit" class="button-secondary context-action">Remove</button>
+              </form>
+            </div>
+          </article>
+        ))
+      )}
+      <div id="saved-search-empty-state" class="alert alert-success" hidden>No saved searches or starred vehicles match your filter.</div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { ensureDefaultSavedListings } from '../lib/saved-listings';
+
+  const filterInput = document.getElementById('saved-search-filter');
+  const searchGrid = document.getElementById('saved-search-grid');
+  const searchCount = document.getElementById('saved-search-count');
+  const emptyState = document.getElementById('saved-search-empty-state');
+  const panel = document.getElementById('saved-listings-panel');
+
+  const applySavedSearchFilter = () => {
+    if (!filterInput || !searchGrid || !searchCount || !emptyState) {
+      return;
+    }
+
+    const searchField = filterInput instanceof HTMLInputElement ? filterInput : null;
+    if (!searchField) {
+      return;
+    }
+
+    const query = searchField.value.trim().toLowerCase();
+    const terms = query.split(/\s+/).filter((term): term is string => Boolean(term));
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-search-text]'));
+    let visibleCount = 0;
+
+    cards.forEach((card) => {
+      const searchText = card.dataset.searchText ?? '';
+      const matches = terms.length === 0 || terms.every((term) => searchText.includes(term));
+      card.style.display = matches ? '' : 'none';
+      if (matches) visibleCount += 1;
+    });
+
+    searchCount.textContent = `${visibleCount} match${visibleCount === 1 ? '' : 'es'} found.`;
+    emptyState.hidden = visibleCount !== 0;
+  };
+
+  if (filterInput) {
+    filterInput.addEventListener('input', applySavedSearchFilter);
+    applySavedSearchFilter();
+  }
+
+  const renderSavedListings = async () => {
+    if (!panel) {
+      return;
+    }
+
+    const savedIds = ensureDefaultSavedListings();
+    if (!savedIds.length) {
+      panel.innerHTML = '<div class="alert alert-success">No saved vehicles yet. Star a listing to keep it here.</div>';
+      applySavedSearchFilter();
+      return;
+    }
+
+    const response = await fetch('/api/listings');
+    if (!response.ok) {
+      panel.innerHTML = '<div class="alert alert-error">Unable to load saved vehicles right now.</div>';
+      applySavedSearchFilter();
+      return;
+    }
+
+    const listings = await response.json();
+    const saved = listings.filter((listing: { id: string }) => savedIds.includes(listing.id));
+
+    if (!saved.length) {
+      panel.innerHTML = '<div class="alert alert-success">No saved vehicles yet. Star a listing to keep it here.</div>';
+      applySavedSearchFilter();
+      return;
+    }
+
+    panel.innerHTML = saved.map((listing: { id: string; title: string; make: string; model: string; description: string; color: string; price: number; year: number; mileage: number; media: Array<{ thumbnailUrl?: string; url?: string }> }) => {
+      const preview = listing.media?.[0];
+      const previewUrl = preview?.thumbnailUrl || preview?.url || '/images/car-placeholder.svg';
+      const searchText = `${listing.title} ${listing.make} ${listing.model} ${listing.description} ${listing.color} ${listing.year} ${listing.price}`.toLowerCase();
+      return `
+        <article class="card saved-vehicle-card" data-search-text="${searchText}">
+          <a class="card-link" href="/listings/${listing.id}">
+            <img class="card-media" src="${previewUrl}" alt="${listing.title}" />
+            <div class="card-header">
+              <h2 class="card-title">${listing.title}</h2>
+              <p class="card-meta">$${listing.price.toLocaleString()} · ${listing.year} · ${listing.mileage.toLocaleString()} mi</p>
+            </div>
+          </a>
+        </article>
+      `;
+    }).join('');
+    applySavedSearchFilter();
+  };
+
+  renderSavedListings();
+  window.addEventListener('saved-listings-changed', renderSavedListings);
+
+  const savedSearchGrid = document.getElementById('saved-search-grid');
+  let touchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const hideContextMenus = () => {
+    document.querySelectorAll('.context-menu.visible').forEach((menu) => {
+      menu.classList.remove('visible');
+      menu.setAttribute('aria-hidden', 'true');
+    });
+  };
+
+  if (savedSearchGrid) {
+    savedSearchGrid.addEventListener('contextmenu', (event) => {
+      const target = event.target as Element | null;
+      if (!target) {
+        return;
+      }
+
+      const targetCard = target.closest('.saved-search-card');
+      if (!targetCard) {
+        return;
+      }
+
+      event.preventDefault();
+      hideContextMenus();
+      const menu = targetCard.querySelector('.context-menu');
+      if (menu) {
+        menu.classList.add('visible');
+        menu.setAttribute('aria-hidden', 'false');
+      }
+    });
+
+    savedSearchGrid.addEventListener('click', (event) => {
+      const target = event.target as Element | null;
+      if (!target) {
+        return;
+      }
+
+      const isInsideCard = Boolean(target.closest('.saved-search-card'));
+      const isMenuAction = Boolean(target.closest('.context-menu'));
+      if (!isInsideCard && !isMenuAction) {
+        hideContextMenus();
+      }
+    });
+
+    savedSearchGrid.addEventListener('touchstart', (event) => {
+      const target = event.target as Element | null;
+      if (!target) {
+        return;
+      }
+
+      const targetCard = target.closest('.saved-search-card');
+      if (!targetCard) {
+        return;
+      }
+
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+      }
+
+      touchTimer = window.setTimeout(() => {
+        hideContextMenus();
+        const menu = targetCard.querySelector('.context-menu');
+        if (menu) {
+          menu.classList.add('visible');
+          menu.setAttribute('aria-hidden', 'false');
+        }
+      }, 600);
+    });
+
+    savedSearchGrid.addEventListener('touchend', () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+    });
+
+    savedSearchGrid.addEventListener('touchmove', () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+    });
+  }
+</script>

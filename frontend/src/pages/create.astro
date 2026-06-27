@@ -1,0 +1,175 @@
+---
+import Layout from '../components/Layout.astro';
+import { createListing } from '../lib/backend';
+import { getZipLatLon } from '../lib/geo';
+import type { Listing } from '../lib/types';
+
+export const prerender = false;
+export const dynamic = 'force-dynamic';
+
+let error = '';
+let success = false;
+let savedTitle = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const title = String(form.get('title') ?? '').trim();
+  const make = String(form.get('make') ?? '').trim();
+  const model = String(form.get('model') ?? '').trim();
+  const year = Number(form.get('year') ?? '0');
+  const price = Number(form.get('price') ?? '0');
+  const mileage = Number(form.get('mileage') ?? '0');
+  const color = String(form.get('color') ?? '').trim();
+  const engine = String(form.get('engine') ?? '').trim();
+  const gears = Number(form.get('gears') ?? '5');
+  const drivetrain = String(form.get('drivetrain') ?? '').trim();
+  const fuel = String(form.get('fuel') ?? '').trim();
+  const condition = String(form.get('condition') ?? '').trim();
+  const description = String(form.get('description') ?? '').trim();
+  const zip = String(form.get('zip') ?? '').trim();
+  const mediaUrls = String(form.get('mediaUrls') ?? '').trim();
+
+  if (!title || !make || !model || !year || !price || !mileage || !zip) {
+    error = 'Please complete the required fields: title, make, model, year, price, mileage, and ZIP code.';
+  } else {
+    const zipPoint = getZipLatLon(zip);
+    if (!zipPoint) {
+      error = 'ZIP code not recognized. Use a valid 5-digit U.S. ZIP code.';
+    } else {
+      const media = mediaUrls
+        .split(/\s*,\s*|\n+/)
+        .filter(Boolean)
+        .map((url, index) => ({
+          id: `${index}-${Date.now()}`,
+          url,
+          thumbnailUrl: url,
+          type: url.endsWith('.mp4') || url.includes('video') ? 'video' : 'image',
+        }));
+
+      try {
+        const listing = await createListing({
+          title,
+          make,
+          model,
+          year,
+          price,
+          mileage,
+          color,
+          engine,
+          gears,
+          drivetrain,
+          fuel,
+          condition,
+          description,
+          zip,
+          lat: zipPoint.lat,
+          lon: zipPoint.lon,
+          media,
+        } as Omit<Listing, 'id' | 'createdAt'>);
+
+        success = true;
+        savedTitle = listing.title;
+      } catch (err) {
+        error = 'Failed to save listing through the mock backend.';
+      }
+    }
+  }
+}
+---
+<Layout title="Create Listing">
+  <section>
+    <h1 class="page-headline">Create a New Listing</h1>
+    <p class="page-copy">Add the next stick-shift car to the community marketplace. Use image URLs for quick local MVP media support.</p>
+
+    {error ? <div class="alert alert-error">{error}</div> : null}
+    {success ? <div class="alert alert-success">Listing “{savedTitle}” created successfully.</div> : null}
+
+    <form method="post" class="form-panel">
+      <div class="input-row">
+        <div class="field">
+          <label for="title">Title <span class="required-star" aria-hidden="true">*</span></label>
+          <input id="title" name="title" type="text" placeholder="1998 Toyota Supra RZ" required />
+        </div>
+        <div class="field">
+          <label for="zip">ZIP Code <span class="required-star" aria-hidden="true">*</span></label>
+          <input id="zip" name="zip" type="text" maxlength="5" placeholder="94103" required />
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="field">
+          <label for="make">Make <span class="required-star" aria-hidden="true">*</span></label>
+          <input id="make" name="make" type="text" placeholder="Toyota" required />
+        </div>
+        <div class="field">
+          <label for="model">Model <span class="required-star" aria-hidden="true">*</span></label>
+          <input id="model" name="model" type="text" placeholder="Supra" required />
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="field">
+          <label for="year">Year <span class="required-star" aria-hidden="true">*</span></label>
+          <input id="year" name="year" type="number" min="1960" max="2030" placeholder="1998" required />
+        </div>
+        <div class="field">
+          <label for="price">Price <span class="required-star" aria-hidden="true">*</span></label>
+          <input id="price" name="price" type="number" min="0" placeholder="45000" required />
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="field">
+          <label for="mileage">Mileage <span class="required-star" aria-hidden="true">*</span></label>
+          <input id="mileage" name="mileage" type="number" min="0" placeholder="123000" required />
+        </div>
+        <div class="field">
+          <label for="color">Color</label>
+          <input id="color" name="color" type="text" placeholder="Red" />
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="field">
+          <label for="engine">Engine</label>
+          <input id="engine" name="engine" type="text" placeholder="2JZ-GTE" />
+        </div>
+        <div class="field">
+          <label for="gears">Gears</label>
+          <select id="gears" name="gears">
+            <option value="5">5-speed</option>
+            <option value="6">6-speed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="field">
+          <label for="drivetrain">Drivetrain</label>
+          <input id="drivetrain" name="drivetrain" type="text" placeholder="RWD" />
+        </div>
+        <div class="field">
+          <label for="fuel">Fuel</label>
+          <input id="fuel" name="fuel" type="text" placeholder="Gasoline" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="condition">Condition</label>
+        <input id="condition" name="condition" type="text" placeholder="Excellent" />
+      </div>
+
+      <div class="field">
+        <label for="mediaUrls">Media URLs</label>
+        <textarea id="mediaUrls" name="mediaUrls" placeholder="Paste image or video URLs here, separated by commas"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" placeholder="Detailed build notes, mods, and vehicle history."></textarea>
+      </div>
+
+      <button type="submit">Save Listing</button>
+    </form>
+  </section>
+</Layout>
